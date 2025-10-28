@@ -1,57 +1,100 @@
-use voxell_timer::time_fn;
+use std::{
+    arch::x86_64,
+    fmt::Display,
+    fs,
+    mem::{ManuallyDrop, MaybeUninit},
+};
+
+use voxell_timer::{power_toys::ScopedTimer, time_fn};
 
 use crate::{
-    lexer::{Lexer, LexerError},
+    lexer::{Lexer, LexerError, LexerResult},
     source_code::SourceCode,
 };
 
 pub mod lexer;
 pub mod source_code;
-pub mod test_util;
 pub mod types;
 
+#[derive(Clone, PartialEq, Eq)]
+struct TimerThing {
+    i: i32,
+    s: String,
+}
+
+impl TimerThing {
+    pub fn new(i: i32, s: String) -> Self {
+        Self { i, s }
+    }
+}
+
+impl Display for TimerThing {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.i, self.s)
+    }
+}
+
 fn main() {
-    println!("gen source");
-    let mut source = test_util::source_generator(150_000_000);
-    println!("source: {}, {}", source.len(), source.chars().take(100).collect::<String>());
-    println!("lex source");
-    let mut lexer = Lexer::new(SourceCode::new(&source));
-    let (sum, dur) = time_fn(|| {
-        let mut sum = 0;
-        loop {
-            let next = lexer.lex_single_token();
-            match next {
-                Ok(tok) => {
-                    let _ = std::hint::black_box(tok);
+    let folder = fs::read_dir("progs").unwrap();
+    let mut pairs = vec![];
+    for entry in folder {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        let mut dat = fs::read_to_string(&path).unwrap().repeat(150000);
+        pairs.push((dat, path));
+    }
+
+    let mut sum = 0;
+    let mut total_source = 0;
+    let mut st = ScopedTimer::new(TimerThing::new(0, "main".to_string()));
+
+    let mut f1 = st.fork(TimerThing::new(1, "main".to_string()));
+    for (i, (source, path)) in pairs.into_iter().enumerate() {
+        let mut f2 = f1.fork(TimerThing::new(
+            i as i32,
+            format!("file {}, {:.1}MB", path.to_string_lossy(), source.len() as f64 / 1000000.0),
+        ));
+        let mut lexer = Lexer::new(SourceCode::new(&source));
+        let mut val;
+        'tokens: loop {
+            val = lexer.lex_single_token();
+            if val == Err(LexerError::Eof) {
+                total_source += source.len();
+                break 'tokens;
+            }
+            match val {
+                Ok(_t) => {
                     sum += 1;
                 }
-                Err(LexerError::Eof) => break,
                 Err(e) => {
-                    let (line, col) = lexer.get_line_column();
-                    let index = lexer.index();
-                    let start = lexer.start();
-                    let maybelit: Result<_, _> = lexer.extract_literal();
-
-                    eprintln!(
-                        "lexer error at {}:{} (index {}, start {}), literal {:?}: {:?}",
-                        line, col, index, start, maybelit, e
-                    );
+                    // let (line, col) = lexer.get_line_column();
+                    // let maybe_lit: LexerResult<&[u8]> = lexer.extract_literal();
+                    // let start = lexer.start();
+                    // let index = lexer.index();
+                    // eprintln!(
+                    //     "lexer error in file {:?} at {}:{} (index {}-{}): {:?}, maybe_lit: {:?}",
+                    //     path, line, col, start, index, e, maybe_lit
+                    // );
+                    total_source += lexer.start();
+                    break 'tokens;
                 }
             }
         }
-        sum
-    });
+        f2.join();
+    }
+    f1.join();
 
-    let elapsed_secs = dur.as_secs_f64();
+    // println!(
+    //     "Lexed {:.2}M bytes ({:.2}M tokens) in {:?}\n{:.2} MB/s, {:.2} tokens/s",
+    //     total_source as f64 / 1000000.0,
+    //     sum as f64 / 1000000.0,
+    //     dur,
+    //     (total_source as f64 / elapsed_secs) / 1_000_000.0,
+    //     (150_000_000.0 / elapsed_secs),
+    // );
 
-    println!(
-        "Lexed {} bytes ({} tokens) in {:?}\n{} MB/s, {} tokens/s",
-        source.len(),
-        sum,
-        dur,
-        (source.len() as f64 / elapsed_secs) / 1_000_000.0,
-        (150_000_000.0 / elapsed_secs),
-    );
+    println!("{}", st.join_and_finish_pretty());
 }
 
 #[cfg(test)]
