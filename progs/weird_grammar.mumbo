@@ -1,0 +1,10 @@
+// the anal beads operator
+()()()()()()()()();
+
+// method call
+terry.davis();
+*(*self).method() += 105;
+
+// field access
+tuple.0 = 42;
+

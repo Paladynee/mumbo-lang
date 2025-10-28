@@ -1,0 +1,14 @@
+// Spec-oriented example that requires planned features beyond the current grammar
+fn add(let lhs: const i32, let rhs: const i32) -> const i32 {
+    return lhs + rhs;
+}
+
+fn pointer_offset(let base: uniq *uniq u8, let delta: const isize) -> uniq *uniq u8 {
+    let adjusted = base;
+    adjusted += delta;
+    return adjusted;
+}
+
+fn slice_len(let slice: const (const *const u8, const usize)) -> const usize {
+    return slice.1;
+}

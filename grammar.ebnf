@@ -1,0 +1,139 @@
+alpha = "A" | ? ... ? | "Z" | "a" | ? ... ? | "z";
+digit = "0" | ? ... ? | "9";
+alnum = alpha | digit;
+symbol = "!" | "#" | "$" | "%" | "&" | "'" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/"
+       | ":" | ";" | "<" | "=" | ">" | "?" | "@" | "[" | "]" | "^" | "_" | "`" | "{" | "|"
+       | "}" | "~";
+
+escaped_space = "\t" | "\n" | "\r";
+whitespace = " " | escaped_space;
+byte_escape = "\x", digit, digit;
+escape = whitespace | byte_escape | "\\" | "\0";
+escape_sq = "\'";
+escape_dq = '\"';
+
+string_valid = alnum | symbol | escape;
+string_literal = string_dq;
+string_dq = '"', { ( string_valid - '"' ) | escape_dq }, '"';
+
+bool_literal    = "true" | "false";
+integer_literal = digit, { digit };
+decimal_literal = integer_literal, ".", integer_literal;
+number_literal  = integer_literal | decimal_literal;
+char_literal    = "'", ( ( string_valid - "'" ) | escape_sq ), "'";
+uninit_literal  = "uninit";
+
+literal = string_literal | bool_literal | number_literal | uninit_literal;
+
+keywords = "let" | "fn" | "return" | "extern" | "as" | "const" | "mut" | "anymut"
+         | "compiletime" | "runtime" | "static" | "type" | "literal" | "cast" | "uninit";
+
+identifier = ( alpha | "_" ), { alnum | "_" };
+
+let_expr = "let", identifier, [ ":", type ], "=", expr;
+
+lvalue_primary = identifier | "(", lvalue, ")";
+lvalue_postfix = lvalue_primary, { postfix_op };
+lvalue = ( "*", lvalue ) | lvalue_postfix;
+assignment = lvalue, assignment_op, expr;
+assignment_op = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=";
+
+stmt_list = { stmt };
+stmt = let_stmt | assignment_stmt | expr_stmt | block_stmt;
+let_stmt = let_expr, ";";
+assignment_stmt = assignment, ";";
+expr_stmt = expr, ";";
+block_stmt = block_expr, ";";
+block_expr = "{", stmt_list, [ expr ], "}";
+
+call_args = [ expr, { ",", expr }, [ "," ] ];
+function_call = "(", call_args, ")";
+field_access = ".", ( identifier | integer_literal );
+postfix_op = function_call | field_access;
+equality_op = "==" | "!=";
+comparison_op = "<" | "<=" | ">" | ">=";
+shift_op = "<<" | ">>";
+term_op = "+" | "-";
+factor_op = "*" | "/";
+unary_op = "!" | "-" | "*";
+
+expr = equality;
+
+(* equality operations cannot be chained *)
+equality = comparison, [ equality_op, comparison ];
+
+(* comparison operations cannot be chained *)
+comparison = shift, [ comparison_op, shift ];
+
+(* shift operations cannot be chained *)
+shift = term, [ shift_op, term ];
+
+(* terms can be chained, "3 + 4 - my_number" *)
+term = factor, { term_op, factor };
+
+(* factor can be chained, "3 + 4 - my_number" *)
+factor = unary, { factor_op, unary };
+
+unary = ( unary_op, unary ) | postfix;
+postfix = primary, [ postfix_op ];
+primary = literal | type | identifier | grouping;
+grouping = "(", expr, ")";
+
+fn_type_decl = "let", identifier, ":", type;
+fn_param_list = [ fn_type_decl, { ",", fn_type_decl }, [ "," ] ];
+type_list = [ type, { ",", type }, [ "," ] ];
+fn_ty = "fn", "(", [ type_list ], ")", [ "->", type ];
+tuple_ty = "(", [ type_list ], ")";
+array_ty = "[", ( identifier | integer_literal ), type, "]";
+pointer_ty = "*", type;
+
+array_fill = expr, ";", expr;
+array_elems = { expr, "," }, [ expr, [ "," ] ];
+array_val = "[", ( array_fill | array_elems ), "]";
+
+expr_list = expr, { ",", expr }, [ "," ];
+tuple_val = "(", [ expr_list ], ")";
+mutability = [ "mut" | "const" | "anymut" ];
+
+primitive_uint_ty = "u8" | "u16" | "u32" | "u64" | "usize";
+primitive_int_ty = "i8" | "i16" | "i32" | "i64" | "isize";
+primitive_float_ty = "f32" | "f64";
+primitive_num_ty = primitive_uint_ty | primitive_int_ty | primitive_float_ty;
+
+runtime_spec = "runtime", [ "static" ] | "static" | "compiletime";
+meta_type_names = "type" | "literal";
+
+type_qualifiers = [ runtime_spec ], [ mutability ];
+type_stem = meta_type_names | primitive_num_ty | pointer_ty | tuple_ty | array_ty | fn_ty;
+type = ( type_qualifiers, type_stem ) | identifier;
+(*
+    extern fn print(
+        let buffer: static mut *const u8,
+        let max_read: const usize,
+    ) -> const usize {
+
+    }
+*)
+fn_decl = [ fn_qualifier ], "fn", identifier, "(", [ fn_param_list ], ")", [ "->", type ], block_expr;
+fn_qualifier = "extern" | "compiletime";
+named_type = identifier, ":", type;
+named_type_list = named_type, { ",", named_type }, [ "," ];
+adt_type_block = "{", [ named_type_list ], "}";
+
+enum_variant = identifier, [ "=", expr ];
+enum_variant_list = enum_variant, { enum_variant, "," }, [ "," ];
+enum_block = "{", [ enum_variant_list ], "}";
+
+enum_decl = "enum", identifier, enum_block;
+union_decl = "union", identifier, adt_type_block;
+alias_decl = "alias", identifier, "=", type;
+struct_decl = "struct", identifier, adt_type_block;
+(*
+    repeatable with comma delimiter:
+    { thing, "," }, [ thing, [ "," ] ]
+    standard way:
+    [ thing, { ",", thing }, [ "," ] ]
+*)
+adt_decl = struct_decl | union_decl | enum_decl | alias_decl;
+declaration = fn_decl | let_decl | adt_decl;
+module = { declaration };

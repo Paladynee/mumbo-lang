@@ -1,0 +1,18 @@
+let current_tuple: (const usize, mut u64) = (10, 4);
+
+struct numtuple {
+    first: const usize,
+    second: u64,
+}
+
+methods numtuple {
+    fn new(let first: const usize, let second: mut u64) -> numtuple {
+        return numtuple {
+            // afterthought: have this collapse
+            first: first,
+            second: second,
+        };
+    }
+}
+
+let second: numtuple = numtuple.new(current_tuple.0, current_tuple.1);

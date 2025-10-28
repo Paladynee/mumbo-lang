@@ -1,0 +1,1 @@
+extern fn printf(let format: static const *const u8, ...);

@@ -1,0 +1,15 @@
+// Function declarations kept within current grammar limits
+fn constant_zero() -> const u32 {
+    0
+}
+
+fn arithmetic_literal() -> const i32 {
+    (1 + 2) * 3
+}
+
+fn nested_blocks() -> const f32 {
+    {
+        1.0;
+    };
+    8.0
+}

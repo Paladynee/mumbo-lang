@@ -1,0 +1,14 @@
+// Basic literal and binding coverage for Mumbo
+let plain_integer = 42;
+let negative_literal: const i32 = -7;
+let float_literal: const f32 = 3.1415;
+let decimal_literal = 0.25;
+let double_string = "hello mumbo";
+let single_string = 'c';
+let compiletime_bytes: compiletime anymut [5 u8] = "bytes";
+let runtime_buffer: runtime anymut [4 u8] = "data";
+let maybe_pointer: anymut *anymut u8 = uninit;
+let literal_meta: const literal = "meta";
+let bool_true = true;
+let bool_false = false;
+let big_array: const [8 u8] = uninit;

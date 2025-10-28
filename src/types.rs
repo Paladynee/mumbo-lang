@@ -1,0 +1,176 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Token {
+    KwLet,
+    KwFn,
+    KwReturn,
+    KwExtern,
+    KwConst,
+    KwMut,
+    KwAnymut,
+    KwCompiletime,
+    KwRuntime,
+    KwStatic,
+    KwType,
+    KwCast,
+
+    KwAdtStruct,
+    KwAdtEnum,
+    KwAdtUnion,
+
+    LitInteger,
+    LitFloat,
+    LitStr,
+    LitChar,
+    LitBool,
+    LitUninit,
+    LitIdentifier,
+
+    PuncDot,
+    PuncComma,
+    PuncSemi,
+    PuncColon,
+    PuncArrowRight,
+
+    PuncEq,
+    PuncEqEq,
+    PuncBang,
+    PuncBangEq,
+    PuncLt,
+    PuncLtEq,
+    PuncGt,
+    PuncGtEq,
+
+    PuncPlus,
+    PuncMinus,
+    PuncStar,
+    PuncSlash,
+
+    PuncShl,
+    PuncShr,
+
+    IndentLParen,
+    IndentRParen,
+    IndentLBrace,
+    IndentRBrace,
+    IndentLBracket,
+    IndentRBracket,
+}
+
+impl Token {
+    pub const ALL: &[Token] = &[
+        Token::KwLet,
+        Token::KwFn,
+        Token::KwReturn,
+        Token::KwExtern,
+        Token::KwConst,
+        Token::KwMut,
+        Token::KwAnymut,
+        Token::KwCompiletime,
+        Token::KwRuntime,
+        Token::KwStatic,
+        Token::KwType,
+        Token::KwCast,
+        Token::KwAdtStruct,
+        Token::KwAdtEnum,
+        Token::KwAdtUnion,
+        Token::LitInteger,
+        Token::LitFloat,
+        Token::LitStr,
+        Token::LitChar,
+        Token::LitBool,
+        Token::LitUninit,
+        Token::LitIdentifier,
+        Token::PuncDot,
+        Token::PuncComma,
+        Token::PuncSemi,
+        Token::PuncColon,
+        Token::PuncArrowRight,
+        Token::PuncEq,
+        Token::PuncEqEq,
+        Token::PuncBang,
+        Token::PuncBangEq,
+        Token::PuncLt,
+        Token::PuncLtEq,
+        Token::PuncGt,
+        Token::PuncGtEq,
+        Token::PuncPlus,
+        Token::PuncMinus,
+        Token::PuncStar,
+        Token::PuncSlash,
+        Token::PuncShl,
+        Token::PuncShr,
+        Token::IndentLParen,
+        Token::IndentRParen,
+        Token::IndentLBrace,
+        Token::IndentRBrace,
+        Token::IndentLBracket,
+        Token::IndentRBracket,
+    ];
+
+    #[rustfmt::skip]
+    #[inline]
+    pub const fn is_identifier_extractable(self) -> bool {
+        matches!(
+            self,
+            Token::LitIdentifier |
+            Token::LitBool |
+            Token::LitInteger |
+            Token::LitFloat |
+            Token::LitStr |
+            Token::LitChar
+        )
+    }
+
+    #[inline]
+    pub const fn source_repr(self) -> &'static str {
+        match self {
+            Token::KwLet => "let",
+            Token::KwFn => "fn",
+            Token::KwReturn => "return",
+            Token::KwExtern => "extern",
+            Token::KwConst => "const",
+            Token::KwMut => "mut",
+            Token::KwAnymut => "anymut",
+            Token::KwCompiletime => "compiletime",
+            Token::KwRuntime => "runtime",
+            Token::KwStatic => "static",
+            Token::KwType => "type",
+            Token::KwCast => "cast",
+            Token::KwAdtStruct => "struct",
+            Token::KwAdtEnum => "enum",
+            Token::KwAdtUnion => "union",
+            Token::LitInteger => "{integer}",
+            Token::LitFloat => "{float}",
+            Token::LitStr => "{string}",
+            Token::LitChar => "{char}",
+            Token::LitBool => "{bool}",
+            Token::LitUninit => "uninit",
+            Token::LitIdentifier => "{identifier}",
+            Token::PuncDot => ".",
+            Token::PuncComma => ",",
+            Token::PuncSemi => ";",
+            Token::PuncColon => ":",
+            Token::PuncArrowRight => "->",
+            Token::PuncEq => "=",
+            Token::PuncEqEq => "==",
+            Token::PuncBang => "!",
+            Token::PuncBangEq => "!=",
+            Token::PuncLt => "<",
+            Token::PuncLtEq => "<=",
+            Token::PuncGt => ">",
+            Token::PuncGtEq => ">=",
+            Token::PuncPlus => "+",
+            Token::PuncMinus => "-",
+            Token::PuncStar => "*",
+            Token::PuncSlash => "/",
+            Token::PuncShl => "<<",
+            Token::PuncShr => ">>",
+            Token::IndentLParen => "(",
+            Token::IndentRParen => ")",
+            Token::IndentLBrace => "{",
+            Token::IndentRBrace => "}",
+            Token::IndentLBracket => "[",
+            Token::IndentRBracket => "]",
+        }
+    }
+}

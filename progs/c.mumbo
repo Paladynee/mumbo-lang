@@ -1,0 +1,64 @@
+// draft program, may not be valid yet
+// compiletime constants
+// (every literal except uninit and pointed strings always compiletime unless explicitly `runtime`d)
+let BUFFER_SIZE: const usize = 4096;
+let ZERO_I32: const i32 = 0;
+let NEG_ONE_I32: const i32 = -1;
+let ZERO_ISIZE: const isize = 0;
+let O_RDONLY: const i32 = 0;
+let O_WRONLY: const i32 = 1;
+let O_CREAT: const i32 = 0o100;
+let O_TRUNC: const i32 = 0o1000;
+let S_IRUSR: const i32 = 0o400;
+let S_IWUSR: const i32 = 0o200;
+let OUTPUT_FLAGS: const i32 = O_WRONLY | O_CREAT | O_TRUNC;
+let OUTPUT_MODE: const i32 = S_IRUSR | S_IWUSR;
+let STDERR_FD: const i32 = 2;
+
+let INPUT_PATH_C: const *static const u8 = &c"input.txt";
+let OUTPUT_PATH_C: const *static const u8 = &c"output.txt";
+let ERROR_MSG_SLICE: (const *static const u8, const usize) = &"copy failed\n";
+
+fn copy_file(let input_path: const *const u8, let output_path: const *const u8) -> i32 {
+    let input_fd: const i32 = libc.open(input_path, O_RDONLY, ZERO_I32);
+    if (input_fd < ZERO_I32) {
+        return NEG_ONE_I32;
+    };
+    let output_fd: const i32 = libc.open(output_path, OUTPUT_FLAGS, OUTPUT_MODE);
+    if (output_fd < ZERO_I32) {
+        libc.close(input_fd);
+        return NEG_ONE_I32;
+    };
+    let buffer: mut [BUFFER_SIZE mut u8] = runtime { uninit };
+    let buffer_ptr: const *mut u8 = &buffer cast _;
+    while (true) {
+        let read_count: isize = libc.read(input_fd, buffer_ptr cast _, BUFFER_SIZE);
+        if (read_count < ZERO_ISIZE) {
+            libc.close(output_fd);
+            libc.close(input_fd);
+            return NEG_ONE_I32;
+        };
+        if (read_count == ZERO_ISIZE) {
+            break;
+        };
+        let chunk_len: usize = read_count cast usize;
+        let write_result: isize = libc.write(output_fd, buffer_ptr cast _, chunk_len);
+        if write_result < read_count {
+            libc.close(output_fd);
+            libc.close(input_fd);
+            return NEG_ONE_I32;
+        };
+        // TODO: handle partial writes if libc.write returns less than requested.
+    };
+    libc.close(output_fd);
+    libc.close(input_fd);
+    return ZERO_I32;
+}
+
+fn main() -> i32 {
+    let status: i32 = copy_file(INPUT_PATH_C, OUTPUT_PATH_C);
+    if (status != ZERO_I32) {
+        libc.write(STDERR_FD, ERROR_MSG.0, ERROR_MSG_LEN);
+    };
+    return status;
+}

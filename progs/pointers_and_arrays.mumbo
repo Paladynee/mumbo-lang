@@ -1,0 +1,11 @@
+// Pointer and array typing coverage for Mumbo
+let const_to_const: const *const u8 = uninit;
+let const_to_uniq: const *uniq u8 = uninit;
+let uniq_to_const: uniq *const u8 = uninit;
+let uniq_to_uniq: uniq *uniq u8 = uninit;
+let parameterized_pointer: *const u8 = uninit;
+let nested_pointer: const *uniq *const u8 = uninit;
+let wide_pointer: anymut (const *const u8, const usize) = uninit;
+let runtime_slice: runtime anymut (const *const u8, const usize) = uninit;
+let array_buffer: anymut [12 u8] = "hello mumbo!";
+let static_view: static const *const u8 = "static view";

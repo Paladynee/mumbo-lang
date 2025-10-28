@@ -1,0 +1,41 @@
+// ! . = < >> : == let fn return runtime extern enum const compiletime cast mut anymut
+// static struct type union
+// uninit
+
+let my_custom_function_name1 = fn __secret() -> fn() {
+    return runtime {
+        extern fn bob() {
+            enum Thingamabob {
+                __variant1,
+                __variant2,
+            };
+
+            let variant: const u8 = compiletime { __variant1 cast u8 };
+            let v2: mut u8 = 0;
+            v2 = 1;
+            let v3: anymut static u8 = 0;
+        }
+    };
+};
+
+struct Lol {
+    ty: type,
+    un: myunion,
+};
+
+union myunion {
+    num64: u64,
+    num32: u32,
+};
+let name: literal = "quit smoking";
+let byte: u8 = '5';
+let mynum: mut literal = 1359135;
+let uninitthing: mut u64 = uninit;
+let cond: mut bool = false;
+let cond2: mut bool = true;
+if cond == true {
+    mynum = mynum + 1;
+} else {
+    mynum = mynum - 1;
+};
+let floatlt = 3.14159;
