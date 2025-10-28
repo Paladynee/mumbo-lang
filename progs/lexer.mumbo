@@ -1,0 +1,286 @@
+enum OptionTag {
+    Some,
+    None,
+}
+
+struct OptionalWidePtr {
+    tag: anymut OptionTag,
+    discriminant: anymut (*anymut u8, anymut usize),
+}
+
+fn owp_none() -> OptionalWidePtr {
+    return OptionalWidePtr {
+        tag: None,
+        discriminant: runtime { uninit },
+    };
+}
+
+fn owp_some(
+    let ptr: (anymut *anymut u8, anymut usize)
+) -> OptionalWidePtr {
+    return OptionalWidePtr {
+        tag: Some,
+        discriminant: ptr,
+    };
+}
+
+struct Lexer {
+    src: const *const u8,
+    len: const usize,
+    start: anymut usize,
+    index: anymut usize,
+    literal: anymut OptionalWidePtr,
+}
+
+fn lexer_new(
+    let string: (anymut *anymut u8, anymut usize)
+) -> Lexer {
+    return Lexer {
+        src: string.0,
+        len: string.1,
+        start: 0,
+        index: 0,
+        literal: owp_none(),
+    };
+}
+
+fn lexer_is_at_end(
+    let lexer: anymut *mut Lexer,   
+) -> bool {
+    return (*lexer).index >= (*lexer).len;
+}
+
+struct OptionalByte {
+    tag: OptionTag,
+    discriminant: u8,
+}
+
+fn ob_some(let byte: u8) -> OptionalByte {
+    return OptionalByte {
+        tag: Some,
+        discriminant: byte,
+    };
+}
+
+fn ob_none() -> OptionalByte {
+    return OptionalByte {
+        tag: None,
+        discriminant: runtime { uninit },
+    };
+}
+
+fn lexer_peek(
+    let lexer: *const Lexer,
+) -> OptionalByte {
+    if (lexer_is_at_end(lexer)) {
+        return ob_none();
+    } else {
+        return ob_some((*lexer).src[(*lexer).index]);
+    }
+}
+
+fn lexer_peek_next(
+    let lexer: *const Lexer,
+) -> OptionalByte {
+    if ((*lexer).index + 1) >= (*lexer).len {
+        return ob_none();
+    } else {
+        return ob_some((*lexer).src[(*lexer).index + 1]);
+    }
+}
+
+fn lexer_advance(
+    let lexer: *mut Lexer,
+) -> OptionalByte {
+    if (lexer_is_at_end(lexer)) {
+        return ob_none();
+    } else {
+        let result: const u8 = (*lexer).src[(*lexer).index];
+        (*lexer).index = (*lexer).index + 1;
+        return ob_some(result);
+    }
+}
+
+fn lexer_matches(
+    let lexer: *mut Lexer,
+    let expected: anymut u8,
+) -> bool {
+    if (lexer_is_at_end(lexer)) {
+        return false;
+    };
+    if ((*lexer).src[(*lexer).index] != expected) {
+        return false;
+    };
+    (*lexer).index = (*lexer).index + 1;
+    return true;
+}
+
+struct OptionalToken {
+    tag: anymut OptionTag,
+    discriminant: anymut Token,
+}
+
+enum Token {
+    Eq,
+    EqEq,
+    Ident,
+}
+
+fn ot_none() -> OptionalToken {
+    return OptionalToken {
+        tag: None,
+        discriminant: runtime { uninit },
+    };
+}
+
+fn ot_some(let token: anymut Token) -> OptionalToken {
+    return OptionalToken {
+        tag: Some,
+        discriminant: token,
+    };
+}
+
+fn lexer_skip_whitespace(
+    let lexer: anymut *mut Lexer,
+) {
+    // lang doesn't have loops yet, so we have to use recursion lol
+    if (lexer_is_at_end(lexer)) {
+        return;
+    };
+    let c: const u8 = lexer_peek(lexer).discriminant;
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+        lexer_advance(lexer);
+        lexer_skip_whitespace(lexer);
+    };
+}
+
+fn lexer_extract_literal(
+    let lexer: anymut *mut Lexer,
+) -> OptionalWidePtr {
+    let temp = (*lexer).literal;
+    (*lexer).literal = owp_none();
+    return temp;
+}
+
+fn lexer_lex_one(
+    let lexer: anymut *mut Lexer,
+) -> OptionalToken {
+    lexer_skip_whitespace(lexer);
+    if (lexer_is_at_end(lexer)) {
+        return ot_none();
+    };
+    (*lexer).start = (*lexer).index;
+    // tag cant be none because we just checked for bounds
+    let c: const u8 = lexer_advance(lexer).discriminant;
+
+    if (c == '=') {
+        if (lexer_matches(lexer, '=')) {
+            return ot_some(Token::EqEq);
+        } else {
+            return ot_some(Token::Eq);
+        };
+    } else if (is_valid_ident_head(c)) {
+        return lexer_ident(lexer);
+    } else {
+        // unknown character
+        return ot_none();
+    }
+}
+
+fn is_valid_ident_head(
+    let byte: const u8
+) -> bool {
+    return byte >= 'a' && byte <= 'z' || byte >= 'A' && byte <= 'Z' || byte == '_';
+}
+
+fn is_valid_ident_tail(
+    let byte: const u8
+) -> bool {
+    return is_valid_ident_head(byte) || (byte >= '0' && byte <= '9');
+}
+
+fn lexer_slice_here(
+    let lexer: anymut *const Lexer
+) -> (*const u8, usize) {
+    let start: const usize = (*lexer).start;
+    let end: const usize = (*lexer).index;
+    return ((*lexer).src + start, end - start);
+    //                   ^ ptr arithmetic?
+}
+
+fn lexer_ident(
+    let lexer: anymut *mut Lexer,
+) -> OptionalToken {
+    // we would use a while loop here but lang doesnt have loops yet
+    if (lexer_is_at_end(lexer)) {
+        let slice = lexer_slice_here(lexer);
+        (*lexer).literal = owp_some(slice);
+        return ot_some(Token::Ident);
+    };
+    let c: const u8 = lexer_peek(lexer).discriminant;
+    if (is_valid_ident_tail(c)) {
+        lexer_advance(lexer);
+        return lexer_ident(lexer);
+    };
+    let slice = lexer_slice_here(lexer);
+    (*lexer).literal = owp_some(slice);
+    return ot_some(Token::Ident);
+}
+
+fn main(
+    let argc: const usize,
+    let argv: anymut *anymut *anymut u8,
+) {
+    let litsource: mut literal = "haha == haha or bahaha == hababa hmm maybe if we let x be a";
+    litsource = litsource + " number _0 then we assign it x = 69";
+    let source: const [const u8 _] = runtime { litsource };
+    let source_ptr: (const *const [u8], const usize) = (&source, runtime { litsource.len() });
+    let lexer: mut Lexer = lexer_new(source_ptr);
+    
+    main_recursive_lex_loop();
+}
+
+fn main_recursive_lex_loop(
+    let lexer: *mut Lexer,
+) {
+    let res = lexer_lex_one(lexer);
+    if (res.tag == Some) {
+        print_token(res.discriminant);
+        main_recursive_lex_loop(lexer);
+        puts(&c"\n");
+    } else {
+        return;
+    }
+}
+
+extern fn printf(
+    let format: const *const u8,
+    let arg1: const *static const u8,
+);
+
+extern fn puts(
+    let str: const *const u8,
+);
+
+fn print_token(
+    let tok: anymut Token,
+) {
+    // if (tok != Ident) {
+        printf(&c"%s ", token_to_static_str(tok));
+    // } else {
+    //     // we would need to convert the byte slice into a zero terminated string for c interop
+    //     // for that we'd need allocation, so we just dont print this token
+    // }
+}
+
+fn token_to_static_str(
+    let tok: anymut Token,
+) -> anymut *static const u8 {
+    if (tok == EqEq) {
+        return &c"EqEq";
+    } else if (tok == Eq) {
+        return &c"Eq";
+    } else if (tok == Ident) {
+        return &c"{identifier}";
+    }
+}

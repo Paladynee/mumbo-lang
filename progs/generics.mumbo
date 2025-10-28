@@ -1,0 +1,49 @@
+enum MaybeTag {
+    Something,
+    Nothing,
+}
+
+struct Maybe {
+    generic A: type,
+    
+    tag: MaybeTag,
+    discriminant: anymut A,
+}
+
+enum FallibleTag {
+    Just,
+    Error,
+}
+
+struct Fallible {
+    generic A: type,
+    generic E: type,
+    
+    tag: FallibleTag,
+    discriminant: union {
+        just: A,
+        error: E,
+    },
+}
+
+struct WidePtr {
+    generic A: type,
+    generic Meta: type,
+    
+    ptr: anymut *anymut A,
+    meta: anymut Meta,
+}
+
+struct Array {
+    generic A: type,
+    generic Size: usize,
+
+    data: anymut [anymut A Size],
+}
+
+union MaybeUninit {
+    generic A: type,
+    
+    init: anymut A,
+    uninit: (),
+}

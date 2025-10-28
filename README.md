@@ -280,6 +280,38 @@ a shorter way to write the above:
 
 boolean literals (and every other literal) are always compiletime so `mut bool`, uninit literals are always `runtime` so `compiletime mut u64`. compiletime tuples can be formed out of all-compiletime values.
 
+## generics
+
+generics are implemented as named fields on structs and unions preceded by the word `generic`.
+
+you declare them like this:
+
+```
+struct MyContainer {
+    generic A: type,
+    data: anymut A,    
+}
+```
+
+and instantiate it like this:
+
+```
+fn give_bool(
+    let some_bool: const bool,
+) -> MyContainer {
+    return MyContainer {
+        A: bool,
+        data: some_bool,
+    };
+}
+```
+
+if you want to type out the fully qualified name for some reason, here's how you can do it:
+
+```
+fn give_bool(...) -> MyContainer rigid { A: bool } { ... }
+```
+
 ## casts
 
 primitive types can be casted with `cast`:

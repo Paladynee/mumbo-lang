@@ -71,7 +71,7 @@ shift = term, [ shift_op, term ];
 (* terms can be chained, "3 + 4 - my_number" *)
 term = factor, { term_op, factor };
 
-(* factor can be chained, "3 + 4 - my_number" *)
+(* factors can be chained, "3 * 4 / my_number" *)
 factor = unary, { factor_op, unary };
 
 unary = ( unary_op, unary ) | postfix;
@@ -116,7 +116,9 @@ type = ( type_qualifiers, type_stem ) | identifier;
 *)
 fn_decl = [ fn_qualifier ], "fn", identifier, "(", [ fn_param_list ], ")", [ "->", type ], block_expr;
 fn_qualifier = "extern" | "compiletime";
-named_type = identifier, ":", type;
+
+named_type_qualifier = "generic";
+named_type = [ named_type_qualifier ], identifier, ":", type;
 named_type_list = named_type, { ",", named_type }, [ "," ];
 adt_type_block = "{", [ named_type_list ], "}";
 

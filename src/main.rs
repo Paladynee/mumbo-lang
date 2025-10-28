@@ -68,14 +68,14 @@ fn main() {
                     sum += 1;
                 }
                 Err(e) => {
-                    // let (line, col) = lexer.get_line_column();
-                    // let maybe_lit: LexerResult<&[u8]> = lexer.extract_literal();
-                    // let start = lexer.start();
-                    // let index = lexer.index();
-                    // eprintln!(
-                    //     "lexer error in file {:?} at {}:{} (index {}-{}): {:?}, maybe_lit: {:?}",
-                    //     path, line, col, start, index, e, maybe_lit
-                    // );
+                    let (line, col) = lexer.get_line_column();
+                    let maybe_lit: LexerResult<&[u8]> = lexer.extract_literal();
+                    let start = lexer.start();
+                    let index = lexer.index();
+                    eprintln!(
+                        "lexer error in file {:?} at {}:{} (index {}-{}): {:?}, maybe_lit: {:?}",
+                        path, line, col, start, index, e, maybe_lit
+                    );
                     total_source += lexer.start();
                     break 'tokens;
                 }
