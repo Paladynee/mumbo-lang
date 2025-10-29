@@ -3,3 +3,4 @@ flamegraph.svg
 perf.data
 perf.data.old
 simd_idea.txt
+tarpaulin-report.html
