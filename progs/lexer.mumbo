@@ -108,7 +108,7 @@ fn lexer_matches(
     if (lexer_is_at_end(lexer)) {
         return false;
     };
-    if ((*lexer).src[(*lexer).index] != expected) {
+    if (lexer_peek(lexer) != expected) {
         return false;
     };
     (*lexer).index = (*lexer).index + 1;
@@ -175,12 +175,13 @@ fn lexer_lex_one(
 
     if (c == '=') {
         if (lexer_matches(lexer, '=')) {
+            lexer_advance(lexer);
             return ot_some(Token::EqEq);
         } else {
             return ot_some(Token::Eq);
         };
     } else if (is_valid_ident_head(c)) {
-        return lexer_ident(lexer);
+        return ot_some(lexer_ident(lexer));
     } else {
         // unknown character
         return ot_none();
@@ -210,12 +211,12 @@ fn lexer_slice_here(
 
 fn lexer_ident(
     let lexer: anymut *mut Lexer,
-) -> OptionalToken {
+) -> Token {
     // we would use a while loop here but lang doesnt have loops yet
     if (lexer_is_at_end(lexer)) {
         let slice = lexer_slice_here(lexer);
         (*lexer).literal = owp_some(slice);
-        return ot_some(Token::Ident);
+        return Token::Ident;
     };
     let c: const u8 = lexer_peek(lexer).discriminant;
     if (is_valid_ident_tail(c)) {
@@ -224,7 +225,7 @@ fn lexer_ident(
     };
     let slice = lexer_slice_here(lexer);
     (*lexer).literal = owp_some(slice);
-    return ot_some(Token::Ident);
+    return Token::Ident;
 }
 
 fn main(
@@ -234,7 +235,7 @@ fn main(
     let litsource: mut literal = "haha == haha or bahaha == hababa hmm maybe if we let x be a";
     litsource = litsource + " number _0 then we assign it x = 69";
     let source: const [const u8 _] = runtime { litsource };
-    let source_ptr: (const *const [u8], const usize) = (&source, runtime { litsource.len() });
+    let source_ptr: (const *const [u8], const usize) = (&source, source.len());
     let lexer: mut Lexer = lexer_new(source_ptr);
     
     main_recursive_lex_loop();

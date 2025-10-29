@@ -1,15 +1,12 @@
-use std::{
-    arch::x86_64,
-    fmt::Display,
-    fs,
-    mem::{ManuallyDrop, MaybeUninit},
-};
+use std::{fmt::Display, fs, time::Duration};
 
+use voxell_rng::prelude::RngCoreExtension;
 use voxell_timer::{power_toys::ScopedTimer, time_fn};
 
 use crate::{
     lexer::{Lexer, LexerError, LexerResult},
     source_code::SourceCode,
+    types::Token,
 };
 
 pub mod lexer;
@@ -23,7 +20,7 @@ struct TimerThing {
 }
 
 impl TimerThing {
-    pub fn new(i: i32, s: String) -> Self {
+    pub const fn new(i: i32, s: String) -> Self {
         Self { i, s }
     }
 }
@@ -41,7 +38,7 @@ fn main() {
         let entry = entry.unwrap();
         let path = entry.path();
 
-        let mut dat = fs::read_to_string(&path).unwrap().repeat(150000);
+        let dat = fs::read_to_string(&path).unwrap().repeat(15000);
         pairs.push((dat, path));
     }
 
@@ -73,7 +70,7 @@ fn main() {
                     let start = lexer.start();
                     let index = lexer.index();
                     eprintln!(
-                        "lexer error in file {:?} at {}:{} (index {}-{}): {:?}, maybe_lit: {:?}",
+                        "lexer error at {:?}:{}:{} (index {}-{}): {:?}, maybe_lit: {:?}",
                         path, line, col, start, index, e, maybe_lit
                     );
                     total_source += lexer.start();
@@ -85,16 +82,74 @@ fn main() {
     }
     f1.join();
 
-    // println!(
-    //     "Lexed {:.2}M bytes ({:.2}M tokens) in {:?}\n{:.2} MB/s, {:.2} tokens/s",
-    //     total_source as f64 / 1000000.0,
-    //     sum as f64 / 1000000.0,
-    //     dur,
-    //     (total_source as f64 / elapsed_secs) / 1_000_000.0,
-    //     (150_000_000.0 / elapsed_secs),
-    // );
-
+    let dur = st
+        .clone()
+        .join_and_finish()
+        .into_iter()
+        .map(|a| a.1)
+        .fold(Duration::ZERO, |acc, next| acc + next);
     println!("{}", st.join_and_finish_pretty());
+    println!(
+        "Finished {} bytes in {:?} ({:.2} MB/s)",
+        total_source,
+        dur,
+        total_source as f64 / dur.as_secs_f64() / 1000000.0
+    );
+
+    println!("starting quoted string bruh benchmark");
+    println!("genning strings");
+    let mut s = String::new();
+    for _ in 0..10000 {
+        s += &get_quoted_string(15000);
+    }
+    assert!(s.len() > 150_000_000);
+    let mut lexer = Lexer::new(SourceCode::new(&s));
+    let mut len = 0;
+    let (lexed, dur) = time_fn(|| {
+        let mut val: LexerResult<Token>;
+        loop {
+            val = lexer.lex_single_token();
+            match val {
+                Ok(t) if t.is_identifier_extractable() => {
+                    let literal = unsafe { lexer.extract_literal().unwrap_unchecked() };
+                    len += literal.len();
+                    continue;
+                }
+                Ok(t) => panic!("got {:?}", t),
+                Err(LexerError::Eof) => break,
+                Err(_) => panic!(),
+            }
+        }
+        val
+    });
+    println!("total {} lexed in {:?}", len, dur);
+
+    println!("starting quoted string bruh benchmark");
+    println!("genning long string");
+    let s = get_quoted_string(150_000_000);
+    assert!(s.len() > 150_000_000);
+    let mut lexer = Lexer::new(SourceCode::new(&s));
+    let (lexed, dur) = time_fn(|| lexer.lex_single_token());
+    assert_eq!(lexed, Ok(Token::LitStr));
+    let literal = lexer.extract_literal().unwrap();
+    println!("string of length {} lexed in {:?}", literal.len(), dur);
+}
+
+fn get_quoted_string(len: usize) -> String {
+    static ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`~!@#$%^&*()_+{}[]|;:',./<>?-=\n\t\r\0";
+    let mut rng = voxell_rng::rng::XoRoShiRo128::default();
+
+    let mut vec: Vec<u8> = vec![b'"'];
+
+    for _ in 0..len {
+        let index = rng.next_u64() % ALPHABET.len() as u64;
+        vec.push(ALPHABET[index as usize]);
+    }
+
+    vec.push(b'n');
+    vec.push(b'"');
+
+    String::from_utf8(vec).unwrap()
 }
 
 #[cfg(test)]
@@ -104,7 +159,7 @@ mod tests {
     use crate::types::Token;
 
     #[test]
-    fn identifier_test() {
+    fn general_test() {
         let source = "
         // ! . = < >> : == let fn return runtime extern enum const compiletime cast mut anymut
         // static struct type union
@@ -149,8 +204,8 @@ mod tests {
         let floatlt = 3.14159;
         ";
 
-        let mut lexer = Lexer::new(SourceCode::new(&source));
-        let mut val: LexerResult<Token> = Ok(Token::KwConst);
+        let mut lexer = Lexer::new(SourceCode::new(source));
+        let mut val: LexerResult<Token>;
         loop {
             val = lexer.lex_single_token();
             if val == Err(crate::lexer::LexerError::Eof) {

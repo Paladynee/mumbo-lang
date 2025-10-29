@@ -29,3 +29,18 @@ impl<'source> SourceCode<'source> {
         self.code.as_bytes()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::SourceCode;
+
+    #[test]
+    fn source_code_accessors_work() {
+        let text = "let x: const u8 = 10;";
+        let source_code = SourceCode::new(text);
+        assert_eq!(source_code.as_str(), text);
+        assert_eq!(source_code.len(), text.len());
+        assert!(!source_code.is_empty());
+        assert_eq!(source_code.as_bytes(), text.as_bytes());
+    }
+}

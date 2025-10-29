@@ -1,4 +1,4 @@
-use crate::lexer::Lexer;
+use crate::lexer::{Lexer, lexer_impls};
 
 pub const fn skip_whitespace_impl(lexer: &mut Lexer<'_>) {
     while !lexer.is_at_end() {
@@ -7,7 +7,7 @@ pub const fn skip_whitespace_impl(lexer: &mut Lexer<'_>) {
         let next = unsafe { lexer.peek_unchecked() };
 
         match next {
-            b' ' | b'\r' | b'\t' | b'\n' => unsafe {
+            c if lexer_impls::skip_whitespace::is_whitespace(c) => unsafe {
                 lexer.advance_unchecked();
             },
 
@@ -39,5 +39,35 @@ pub const fn skip_whitespace_impl(lexer: &mut Lexer<'_>) {
 
             _ => break,
         };
+    }
+}
+
+#[inline]
+pub const fn is_whitespace(byte: u8) -> bool {
+    matches!(byte, b' ' | b'\r' | b'\t' | b'\n')
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{lexer::Lexer, source_code::SourceCode};
+
+    #[test]
+    fn skips_whitespace_correctly() {
+        let source = "
+            hi
+            // residual
+        ";
+
+        let mut lexer = Lexer::new(SourceCode::new(source));
+
+        lexer.skip_whitespace();
+        assert!(!lexer.is_at_end());
+        assert!(lexer.matches_bytes(b"hi"));
+        assert!(!lexer.is_at_end());
+        assert_eq!(lexer.peek(), Some(b'\n'));
+
+        lexer.skip_whitespace();
+        assert!(lexer.is_at_end());
+        assert_eq!(lexer.peek(), None);
     }
 }

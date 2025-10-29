@@ -44,9 +44,25 @@ pub enum Token {
     PuncMinus,
     PuncStar,
     PuncSlash,
+    PuncModulo,
+
+    PuncAnd,
+    PuncOr,
+    PuncXor,
 
     PuncShl,
     PuncShr,
+
+    PuncPlusEq,
+    PuncMinusEq,
+    PuncStarEq,
+    PuncSlashEq,
+    PuncModuloEq,
+    PuncAndEq,
+    PuncOrEq,
+    PuncXorEq,
+    PuncShlEq,
+    PuncShrEq,
 
     IndentLParen,
     IndentRParen,
@@ -97,6 +113,10 @@ impl Token {
         Token::PuncMinus,
         Token::PuncStar,
         Token::PuncSlash,
+        Token::PuncModulo,
+        Token::PuncAnd,
+        Token::PuncOr,
+        Token::PuncXor,
         Token::PuncShl,
         Token::PuncShr,
         Token::IndentLParen,
@@ -112,12 +132,13 @@ impl Token {
     pub const fn is_identifier_extractable(self) -> bool {
         matches!(
             self,
-            Token::LitIdentifier |
-            Token::LitBool |
             Token::LitInteger |
             Token::LitFloat |
             Token::LitStr |
-            Token::LitChar
+            Token::LitChar |
+            Token::LitBool |
+            Token::LitUninit |
+            Token::LitIdentifier
         )
     }
 
@@ -163,8 +184,22 @@ impl Token {
             Token::PuncMinus => "-",
             Token::PuncStar => "*",
             Token::PuncSlash => "/",
+            Token::PuncModulo => "%",
+            Token::PuncAnd => "&",
+            Token::PuncOr => "|",
+            Token::PuncXor => "^",
             Token::PuncShl => "<<",
             Token::PuncShr => ">>",
+            Token::PuncPlusEq => "+=",
+            Token::PuncMinusEq => "-=",
+            Token::PuncStarEq => "*=",
+            Token::PuncSlashEq => "/=",
+            Token::PuncModuloEq => "%=",
+            Token::PuncAndEq => "&=",
+            Token::PuncOrEq => "|=",
+            Token::PuncXorEq => "^=",
+            Token::PuncShlEq => "<<=",
+            Token::PuncShrEq => ">>=",
             Token::IndentLParen => "(",
             Token::IndentRParen => ")",
             Token::IndentLBrace => "{",
